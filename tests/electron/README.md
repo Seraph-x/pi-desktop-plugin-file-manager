@@ -1,6 +1,6 @@
-# PDF 桌面回归检查
+# PDF desktop regression checks
 
-先阅读根目录 `README.md`。本检查运行 `views/` 中的生产 IIFE 和真实的 `main.js`，通过隔离的 Electron preload 桥接；窗口保持 `sandbox: true`、`contextIsolation: true`、`nodeIntegration: false`。临时目录内创建项目、Git 基线和应用 profile，结束后关闭测试进程并删除临时目录，不读取或修改真实 PI-Desktop profile。测试进程会拒绝并记录 HTTP/HTTPS 请求。
+Read the root `README.md` first. These checks run the production IIFE in `views/` and the real `main.js` through an isolated Electron preload bridge; the window keeps `sandbox: true`, `contextIsolation: true`, and `nodeIntegration: false`. Projects, git baselines, and the application profile are created inside a temporary directory, and the test process closes and deletes that directory when it finishes — the real PI-Desktop profile is never read or modified. The test process refuses and records every HTTP/HTTPS request.
 
 ```bash
 cd views-src
@@ -15,14 +15,14 @@ npm run verify:alignment
 npm run verify:resources
 ```
 
-以上三条桌面检查命令默认加载当前 `tests/electron` 目录安装的依赖，并在 `os.tmpdir()` 中创建项目和 profile；无需设置 `PI_SCRATCH_DIR`，也不依赖作者的临时工具目录。测试依赖只供 QA 使用，不进入运行包。`PDF_ELECTRON_DIR` 和 `PDF_PLAYWRIGHT_DIR` 可分别指向已有、包含对应 `node_modules` 的工具目录，再从仓库根目录运行 `node tests/electron/verify-pdf.cjs`、`node tests/electron/verify-pdf-alignment.cjs` 或 `node tests/electron/verify-pdf-resources.cjs`。`PDF_PLUGIN_DIR` 可指向解包后的安装包，`PDF_EVIDENCE_DIR` 可指定保留截图 / JSON 的目录（对齐结果为 `pdf-alignment-result.json`）；未指定时，证据随临时项目清理，结果仍输出到控制台。这些路径应只指向用于测试的文件与输出。
+The three desktop check commands above load the dependencies installed in the current `tests/electron` directory by default and create projects and profiles under `os.tmpdir()`; `PI_SCRATCH_DIR` does not need to be set and no author-side tool directory is required. Test dependencies are for QA only and never enter the runtime package. `PDF_ELECTRON_DIR` and `PDF_PLAYWRIGHT_DIR` can each point at an existing tool directory containing the matching `node_modules`, after which you can run `node tests/electron/verify-pdf.cjs`, `node tests/electron/verify-pdf-alignment.cjs`, or `node tests/electron/verify-pdf-resources.cjs` from the repository root. `PDF_PLUGIN_DIR` can point at an unpacked install package, and `PDF_EVIDENCE_DIR` can name a directory where screenshots and JSON are kept (the alignment result is `pdf-alignment-result.json`); without it the evidence is cleaned up with the temporary project while results still go to the console. These paths should point only at files and output used for testing.
 
-正式打包前，在仓库根目录运行 `node scripts/prepare-package.mjs`，再对 `dist/runtime` 使用官方 `PluginCheck` / `PluginPack`；该运行目录不包含 `tests/` 或 QA 依赖。可用 `PDF_PLUGIN_DIR` 指向此目录执行同一组桌面检查。
+Before a real package, run `node scripts/prepare-package.mjs` in the repository root and then use the official `PluginCheck` / `PluginPack` against `dist/runtime`; that runtime directory contains neither `tests/` nor QA dependencies. `PDF_PLUGIN_DIR` can point at this directory to run the same set of desktop checks against it.
 
-覆盖实际画布与中英文文字、页导航和三种布局、缩放、缩略图、无书签提示、元数据、全文查找（三种模式组合、无效正则恢复）及计数/高亮/键盘操作、快速切换与重新加载、Git binary diff 返回、文件自动刷新、损坏和加密文档错误、窄面板双语界面、原始 PDF 字节不变，以及 Worker / Blob URL 释放。扫描件没有文字层时不提供 OCR；本测试不覆盖所有 PDF 编码、命名/嵌套书签、跨平台或超大文档性能，不能替代完整发布验收。
-`verify:alignment` 另外打开合成的嵌入字体 PDF，对常规 / 斜体 / 粗体与数学文字的文字层边界、跨词鼠标选择和资源清理做回归；夹具不包含用户文档。
-`verify:resources` 另外检查连续文档开关、嵌入字体 Worker 故障、旧文档与新文档重叠清理、销毁或启动无回包、恶劣正则的界面响应 / 超时 / 取消 / 恢复，以及重复显式与命名书签导航的监听数量。字体、Worker 和 Blob URL 必须回到基线；测试脚本生成所需合成 PDF，不使用用户文件。
+Coverage: the real canvas plus Chinese and English text, page navigation and all three layouts, zoom, thumbnails, the no-outline notice, metadata, full-document search (every combination of the three modes, recovery from an invalid regex) including counts / highlighting / keyboard operation, fast switching and reloading, git binary diff responses, automatic file refresh, corrupt and encrypted document errors, the narrow-panel bilingual interface, unchanged original PDF bytes, and Worker / Blob URL release. Scanned documents without a text layer are not OCR'd; these checks do not cover every PDF encoding, named/nested bookmarks, cross-platform behaviour, or very large documents, and they do not replace full release acceptance.
+`verify:alignment` additionally opens synthetic embedded-font PDFs and regresses text-layer boundaries for regular / italic / bold and mathematical text, cross-word mouse selection, and resource cleanup; the fixtures contain no user documents.
+`verify:resources` additionally checks continuous-document switching, an embedded-font Worker failure, cleanup when an old and a new document overlap, teardown or startup with no response, and the interface response / timeout / cancel / recovery for an abusive regex, plus the listener count after repeated explicit and named bookmark navigation. Fonts, Workers, and Blob URLs must return to baseline; the test script generates the synthetic PDFs it needs and never uses user files.
 
-`fixtures/` 只含本贡献生成的小型合成文档，无聊天记录、课程材料或用户文件。`generate-fixtures.py` 给出生成过程（可选 Python 的 ReportLab 与 pypdf），常规测试直接使用已提交的夹具，无需 Python。损坏后续页的夹具由测试脚本自身生成；加密夹具密码仅用于测试，查看器应提示使用默认应用解锁。
+`fixtures/` contains only small synthetic documents generated for this contribution — no chat logs, course material, or user files. `generate-fixtures.py` documents the generation process (optionally with Python's ReportLab and pypdf); normal runs use the committed fixtures directly and need no Python. The fixture with a corrupted trailing page is generated by the test script itself; the password on the encrypted fixture exists only for testing, and the viewer should prompt for unlocking in the default application.
 
-后续修改 PDF 或 watch 行为时，应同时执行本检查，避免仅通过 Node 的纯函数测试就宣称桌面交互可用。预期损坏文档可能导致 PDF.js 控制台诊断；页面未捕获异常和任何远程请求均不应发生。
+Any later change to PDF or watch behaviour should run these checks as well, rather than claiming desktop interaction works on the strength of Node-only pure-function tests. Expected corrupt documents may produce PDF.js console diagnostics; uncaught page exceptions and any remote request must not occur.
